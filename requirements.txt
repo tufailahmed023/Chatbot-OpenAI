@@ -3,3 +3,4 @@ openai
 langchain
 elevenlabs
 python-telegram-bot
+gunicorn
