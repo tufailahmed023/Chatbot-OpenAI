@@ -88,8 +88,9 @@ if __name__ == '__main__':
     application.add_handler(start_handler)
     application.add_handler(speech_handler)
     application.add_handler(help_handler)
-    application.add_handler(message_handler)
     application.add_handler(github_handler)
+    application.add_handler(message_handler)
+    
     
 
 

@@ -1,4 +1,5 @@
 python-dotenv 
-aiogram
 openai 
 langchain
+elevenlabs
+python-telegram-bot
