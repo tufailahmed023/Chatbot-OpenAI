@@ -40,8 +40,14 @@ async def help(update:Update,context:ContextTypes.DEFAULT_TYPE):
 /start : Start the message 
 /texttospeech : Convert Text to Speech 
 /help : View the Help Menue 
-/madara : Convert Text to Madara VOICE (Coming soon) '''
+/madara : Convert Text to Madara VOICE (Coming soon) 
+/github : To view the code '''
     await context.bot.send_message(update.message.chat_id,text=to_send)
+
+#/github 
+async def github(update:Update,context:ContextTypes.DEFAULT_TYPE):
+    to_send = 'https://github.com/tufailahmed023/Chatbot-OpenAI/tree/main'
+    await context.bot.send_message(update.message.chat_id,text= to_send )
 
 #Handel Message 
 async def handel_message(update:Update,context:ContextTypes.DEFAULT_TYPE):
@@ -56,7 +62,7 @@ async def handel_message(update:Update,context:ContextTypes.DEFAULT_TYPE):
         conversation = ConversationChain(llm=chat)
 
         to_send = conversation.run(message_for_ai)
-        print(f'From User : {from_user}')
+
         await context.bot.send_message(update.message.chat_id,text= to_send )
         
 
@@ -75,6 +81,7 @@ if __name__ == '__main__':
     start_handler = CommandHandler('start', start)
     speech_handler = CommandHandler('texttospeech',text_to_speech)
     help_handler = CommandHandler('help',help)
+    github_handler = CommandHandler('github',github)
     #Message
     message_handler = MessageHandler(filters.TEXT,handel_message)
 
@@ -82,6 +89,7 @@ if __name__ == '__main__':
     application.add_handler(speech_handler)
     application.add_handler(help_handler)
     application.add_handler(message_handler)
+    application.add_handler(github_handler)
     
 
 
