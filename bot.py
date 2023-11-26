@@ -1,72 +1,97 @@
-import asyncio
-import logging
-import sys
-from os import getenv
 from dotenv import load_dotenv
-load_dotenv()
-
-from aiogram import Bot, Dispatcher, Router, types
-from aiogram.enums import ParseMode
-from aiogram.filters import CommandStart,Command
-from aiogram.types import Message
-from aiogram.utils.markdown import hbold
-
+import os 
+from telegram import Update
+from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler,MessageHandler,filters
+from elevenlabs import generate,save
 import openai
 from langchain.chat_models import ChatOpenAI
 from langchain.schema import HumanMessage,SystemMessage
+from langchain.chains import ConversationChain
 
 
+#Commands 
+#/start
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
-Token = getenv('TOKEN')
-openai.api_key = getenv('OPENAI_API_KEY')
+    to_send = f'Hello {update.message.from_user.full_name} \n I a am Chat Bot, Made by Tufail \n\n To see the *Help* menue use /help command. '
+    await context.bot.send_message(chat_id=update.effective_chat.id, text= to_send,parse_mode='Markdown')
 
-bot = Bot(Token, parse_mode=ParseMode.HTML)
-dp = Dispatcher()
+#/text_to_speech 
+async def text_to_speech(update:Update,context:ContextTypes.DEFAULT_TYPE) :
+    chatid = update.message.chat_id
+    text = update.message.text
+    text = text.replace('/texttospeech','')
 
-chat = ChatOpenAI(max_tokens=520,temperature=0.5)
+    aud = generate(
+        text=text,
+        voice='RDL23HMearCQQZp3GIHa'
+    )
 
+    filename = f'{chatid}.wav'
 
-@dp.message(CommandStart())
-async def command_start_handler(message: Message) -> None:
-    """
-    This handler receives messages with `/start` command
-    """
-    await message.reply(f"Hello, {hbold(message.from_user.full_name)}! \n I am Chat Bot Project, Made by {hbold('Ahmed')} \n How can i help you ? ")
+    with open(filename,'wb') as fb:
+        fb.write(aud)
 
+    await context.bot.send_audio(update.message.chat_id,audio=filename,read_timeout=30,write_timeout=30)
 
+#/help 
+async def help(update:Update,context:ContextTypes.DEFAULT_TYPE):
+    to_send = '''
+/start : Start the message 
+/texttospeech : Convert Text to Speech 
+/help : View the Help Menue 
+/madara : Convert Text to Madara VOICE (Coming soon) 
+/github : To view the code '''
+    await context.bot.send_message(update.message.chat_id,text=to_send)
 
-@dp.message(Command(commands=['help']))
-async def helper(message:Message):
-    to_send = f'''
-    Hello {hbold(message.from_user.first_name)} ! 
-Follow these Commands: 
-    /start : To Start the Coversation 
-    /clear : To Clear all Conversation 
-    /help : To view the Help menu 
-    
-{hbold("You can ask me anything, except the naughty stuff ;)")}'''
-    await message.answer(to_send)
+#/github 
+async def github(update:Update,context:ContextTypes.DEFAULT_TYPE):
+    to_send = 'https://github.com/tufailahmed023/Chatbot-OpenAI/tree/main'
+    await context.bot.send_message(update.message.chat_id,text= to_send )
 
-
-
-@dp.message()
-async def convo(message:Message):
-    query = message.text
-
-    message_for_ai = [ 
+#Handel Message 
+async def handel_message(update:Update,context:ContextTypes.DEFAULT_TYPE):
+    from_user = update.message.text
+    if from_user.lower() in ('hello', 'hi','hey'):
+        await context.bot.send_message(update.message.chat_id,text=f'Hello {update.message.from_user.first_name} ')
+    else:
+        message_for_ai = [ 
         SystemMessage(content= 'You are a General purpose Chat bot'),
-        HumanMessage(content=query)
-    ]
+        HumanMessage(content= from_user)]
 
-    to_send = chat(message_for_ai)
-    to_send = to_send.content
-    print(f"By User : {query} /n By AI {to_send}")
-    await message.answer(to_send)
+        conversation = ConversationChain(llm=chat)
 
-async def main() -> None:
-    await dp.start_polling(bot,skip_updates = False)
+        to_send = conversation.run(message_for_ai)
+
+        await context.bot.send_message(update.message.chat_id,text= to_send )
+        
 
 
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO, stream=sys.stdout)
-    asyncio.run(main())
+        
+
+if __name__ == '__main__':
+    load_dotenv()
+    token = os.getenv('TOKEN')
+    openai_api_key = os.getenv('OPENAI_AP_KEY')
+    chat = ChatOpenAI(api_key=openai_api_key, max_tokens=520,temperature=0.2)
+
+    application = ApplicationBuilder().token(token).build()
+    
+    #Commands 
+    start_handler = CommandHandler('start', start)
+    speech_handler = CommandHandler('texttospeech',text_to_speech)
+    help_handler = CommandHandler('help',help)
+    github_handler = CommandHandler('github',github)
+    #Message
+    message_handler = MessageHandler(filters.TEXT,handel_message)
+
+    application.add_handler(start_handler)
+    application.add_handler(speech_handler)
+    application.add_handler(help_handler)
+    application.add_handler(github_handler)
+    application.add_handler(message_handler)
+    
+    
+
+
+    application.run_polling()
